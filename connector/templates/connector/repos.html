@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GitHub Connector — Repositories</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --surface2: #1a1a24;
+      --border: #1e1e2e;
+      --accent: #e8ff47;
+      --accent2: #47ffb2;
+      --accent3: #ff6b6b;
+      --text: #f0f0f5;
+      --muted: #6b6b80;
+      --muted2: #3a3a50;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232,255,71,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,255,71,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+
+    .logo-wrap {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 34px; height: 34px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .logo-icon svg { width: 18px; height: 18px; fill: #0a0a0f; }
+
+    .logo-text {
+      font-size: 1.1rem; font-weight: 800;
+      letter-spacing: -0.5px; color: var(--text);
+    }
+
+    .user-pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px 6px 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .user-pill img {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+    }
+
+    .user-pill span { color: var(--text); font-weight: 500; }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      position: relative; z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex; gap: 16px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      flex: 1; min-width: 140px;
+      animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.1s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+
+    .stat-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -1px;
+    }
+
+    /* ── SECTION HEADER ── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+    }
+
+    .search-box svg { width: 14px; height: 14px; fill: var(--muted); flex-shrink: 0; }
+
+    .search-box input {
+      background: none; border: none; outline: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      width: 180px;
+    }
+
+    .search-box input::placeholder { color: var(--muted); }
+
+    /* ── REPO GRID ── */
+    .repo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .repo-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      display: flex; flex-direction: column; gap: 14px;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+      cursor: default;
+    }
+
+    .repo-card:hover {
+      border-color: rgba(232,255,71,0.3);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    }
+
+    .repo-top {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 10px;
+    }
+
+    .repo-name-wrap { display: flex; align-items: center; gap: 8px; }
+
+    .repo-icon {
+      width: 32px; height: 32px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .repo-icon svg { width: 15px; height: 15px; fill: var(--accent); }
+
+    .repo-name {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+
+    .badge-private {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255,107,107,0.1);
+      color: var(--accent3);
+      border: 1px solid rgba(255,107,107,0.2);
+      white-space: nowrap;
+    }
+
+    .badge-public {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(71,255,178,0.08);
+      color: var(--accent2);
+      border: 1px solid rgba(71,255,178,0.2);
+      white-space: nowrap;
+    }
+
+    .repo-desc {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.3em;
+    }
+
+    .repo-meta {
+      display: flex; align-items: center; gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex; align-items: center; gap: 5px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .meta-item svg { width: 12px; height: 12px; fill: var(--muted); }
+
+    .lang-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .repo-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    .updated {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--muted2);
+    }
+
+    .view-link {
+      display: flex; align-items: center; gap: 5px;
+      text-decoration: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--accent);
+      font-weight: 500;
+      transition: gap 0.15s;
+    }
+
+    .view-link:hover { gap: 8px; }
+    .view-link svg { width: 11px; height: 11px; fill: var(--accent); }
+
+    /* ── LOADING ── */
+    #loading {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 300px; gap: 16px;
+    }
+
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── ERROR ── */
+    #error-state {
+      display: none;
+      text-align: center;
+      padding: 60px 24px;
+    }
+
+    .error-icon {
+      font-size: 2.5rem; margin-bottom: 16px;
+    }
+
+    .error-msg {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--accent3);
+      margin-bottom: 24px;
+    }
+
+    .btn-retry {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px;
+      background: var(--accent);
+      color: #0a0a0f;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border: none; border-radius: 10px;
+      cursor: pointer; text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn-retry:hover { opacity: 0.85; }
+
+    /* ── EMPTY ── */
+    #empty-state {
+      display: none;
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* language color map */
+    .lang-Python    { background: #3572A5; }
+    .lang-JavaScript{ background: #f1e05a; }
+    .lang-TypeScript{ background: #2b7489; }
+    .lang-Java      { background: #b07219; }
+    .lang-Go        { background: #00ADD8; }
+    .lang-Rust      { background: #dea584; }
+    .lang-C         { background: #555555; }
+    .lang-Ruby      { background: #701516; }
+    .lang-PHP       { background: #4F5D95; }
+    .lang-HTML      { background: #e34c26; }
+    .lang-CSS       { background: #563d7c; }
+    .lang-Shell     { background: #89e051; }
+    .lang-default   { background: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <a href="/" class="logo-wrap">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.34-3.369-1.34-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+    </div>
+    <span class="logo-text">GitConnector</span>
+  </a>
+  <div class="user-pill" id="user-pill" style="display:none">
+    <img id="user-avatar" src="" alt="avatar"/>
+    <span id="user-login">—</span>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="stats-bar" style="display:none">
+    <div class="stat-card">
+      <div class="stat-label">Total Repos</div>
+      <div class="stat-value" id="stat-total">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Public</div>
+      <div class="stat-value" id="stat-public">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Private</div>
+      <div class="stat-value" id="stat-private">0</div>
+    </div>
+  </div>
+
+  <!-- Section header with search -->
+  <div class="section-header" id="section-header" style="display:none">
+    <div class="section-title">Repositories</div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <input type="text" id="search-input" placeholder="Filter repos..."/>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Fetching your repositories...</div>
+  </div>
+
+  <!-- Error -->
+  <div id="error-state">
+    <div class="error-icon">⚡</div>
+    <div class="error-msg" id="error-msg">Something went wrong.</div>
+    <a href="/" class="btn-retry">Try Again</a>
+  </div>
+
+  <!-- Empty -->
+  <div id="empty-state">No repositories found.</div>
+
+  <!-- Repo Grid -->
+  <div class="repo-grid" id="repo-grid"></div>
+
+</main>
+
+<script>
+  // ── Helpers ── //
+  const $ = id => document.getElementById(id);
+
+  function getLangClass(lang) {
+    if (!lang) return 'lang-default';
+    const clean = lang.replace(/\s+/g, '').replace(/\+/g,'').replace(/#/g,'');
+    return `lang-${clean}`;
+  }
+
+  function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo ago`;
+    return `${Math.floor(months / 12)}y ago`;
+  }
+
+  function repoCardHTML(repo, delay) {
+    const langClass = getLangClass(repo.language);
+    return `
+      <div class="repo-card" style="animation-delay:${delay}s">
+        <div class="repo-top">
+          <div class="repo-name-wrap">
+            <div class="repo-icon">
+              <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/></svg>
+            </div>
+            <span class="repo-name" title="${repo.name}">${repo.name}</span>
+          </div>
+          <span class="${repo.private ? 'badge-private' : 'badge-public'}">${repo.private ? 'private' : 'public'}</span>
+        </div>
+
+        <div class="repo-desc">${repo.description || 'No description provided.'}</div>
+
+        <div class="repo-meta">
+          ${repo.language ? `
+            <div class="meta-item">
+              <span class="lang-dot ${langClass}"></span>
+              ${repo.language}
+            </div>` : ''}
+          <div class="meta-item">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            ${repo.stargazers_count}
+          </div>
+          <div class="meta-item">
+            <svg viewBox="0 0 24 24"><path d="M7 5C7 3.9 7.9 3 9 3s2 .9 2 2-.9 2-2 2-2-.9-2-2zm8 0c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zM9 7c1.3 0 2.4.84 2.82 2H12v2h-.18C11.4 12.84 10.3 13 9 13H7v5H5V7h4zm6 0h4v11h-2v-5h-2c-1.3 0-2.4-.16-2.82-1H12V9h.18C12.6 7.84 13.7 7 15 7z"/></svg>
+            ${repo.forks_count}
+          </div>
+        </div>
+
+        <div class="repo-footer">
+          <span class="updated">Updated ${timeAgo(repo.updated_at)}</span>
+          <a class="view-link" href="${repo.html_url}" target="_blank" rel="noopener">
+            View
+            <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>`;
+  }
+
+  function renderRepos(repos) {
+    const grid = $('repo-grid');
+    if (!repos.length) {
+      $('loading').style.display = 'none';
+      $('empty-state').style.display = 'block';
+      return;
+    }
+
+    grid.innerHTML = repos.map((r, i) => repoCardHTML(r, i * 0.04)).join('');
+
+    $('stat-total').textContent = repos.length;
+    $('stat-public').textContent  = repos.filter(r => !r.private).length;
+    $('stat-private').textContent = repos.filter(r =>  r.private).length;
+
+    $('loading').style.display        = 'none';
+    $('stats-bar').style.display      = 'flex';
+    $('section-header').style.display = 'flex';
+  }
+
+  function showError(msg) {
+    $('loading').style.display = 'none';
+    $('error-state').style.display = 'block';
+    $('error-msg').textContent = msg;
+  }
+
+  // ── Main ── //
+  const token = new URLSearchParams(window.location.search).get('token');
+
+  if (!token) {
+    showError('No access token found. Please log in again.');
+  } else {
+    // Fetch repos
+    fetch('/repos', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { showError(data.error); return; }
+        renderRepos(data.repositories || []);
+      })
+      .catch(() => showError('Network error. Is the server running?'));
+
+    // Fetch user profile for header pill
+    fetch('https://api.github.com/user', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(r => r.json())
+    .then(user => {
+      if (user.login) {
+        $('user-avatar').src = user.avatar_url;
+        $('user-login').textContent = user.login;
+        $('user-pill').style.display = 'flex';
+      }
+    })
+    .catch(() => {});
+
+    // Search / filter
+    $('search-input').addEventListener('input', function () {
+      const q = this.value.toLowerCase();
+      document.querySelectorAll('.repo-card').forEach(card => {
+        const name = card.querySelector('.repo-name').textContent.toLowerCase();
+        const desc = card.querySelector('.repo-desc').textContent.toLowerCase();
+        card.style.display = (name.includes(q) || desc.includes(q)) ? '' : 'none';
+      });
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GitHub Connector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --border: #2a2a38;
+      --accent: #7c6dfa;
+      --accent2: #4ade80;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --card-hover: #1e1e2e;
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── background grid ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,109,250,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,109,250,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ════════════════════════════════
+       LOGIN SCREEN
+    ════════════════════════════════ */
+    #login-screen {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      animation: fadeIn 0.6s ease;
+    }
+
+    .login-glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(124,109,250,0.12) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -60%);
+      pointer-events: none;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3rem 3.5rem;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 0 60px rgba(124,109,250,0.08);
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .octocat-wrap {
+      width: 72px;
+      height: 72px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+
+    .octocat-wrap svg { width: 38px; height: 38px; fill: var(--text); }
+
+    .login-card h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #fff 40%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .login-card p {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+
+    .btn-login {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 0.85rem 2rem;
+      border-radius: 10px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      justify-content: center;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-login:hover {
+      background: #6a5ce8;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(124,109,250,0.35);
+    }
+
+    .login-note {
+      margin-top: 1.5rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* ════════════════════════════════
+       DASHBOARD SCREEN
+    ════════════════════════════════ */
+    #dashboard-screen {
+      display: none;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      animation: fadeIn 0.5s ease;
+    }
+
+    /* ── navbar ── */
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.1rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .navbar-brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text);
+    }
+
+    .navbar-brand svg { fill: var(--accent); width: 20px; height: 20px; }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 0.3rem 1rem 0.3rem 0.3rem;
+    }
+
+    .user-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--border);
+      object-fit: cover;
+    }
+
+    .user-name {
+      font-size: 0.8rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-logout:hover { border-color: #e05555; color: #e05555; }
+
+    /* ── main content ── */
+    .main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .page-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 0.3rem;
+    }
+
+    .page-header p { color: var(--muted); font-size: 0.8rem; }
+
+    /* ── stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .stat-chip strong { color: var(--text); font-size: 0.9rem; }
+
+    /* ── search ── */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 1.8rem;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem 0.75rem 2.8rem;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap input::placeholder { color: var(--muted); }
+
+    .search-icon {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      width: 16px;
+    }
+
+    /* ── repo grid ── */
+    .repo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+
+    .repo-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.4rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      animation: slideUp 0.4s ease both;
+    }
+
+    .repo-card:hover {
+      background: var(--card-hover);
+      border-color: var(--accent);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(124,109,250,0.1);
+    }
+
+    .repo-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .repo-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--accent);
+      word-break: break-word;
+    }
+
+    .repo-private-badge {
+      font-size: 0.65rem;
+      background: rgba(124,109,250,0.15);
+      color: var(--accent);
+      border: 1px solid rgba(124,109,250,0.3);
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .repo-desc {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .repo-footer {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .repo-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .lang-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent2);
+      display: inline-block;
+    }
+
+    /* ── loading ── */
+    .loading-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 5rem 0;
+      gap: 1rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── empty ── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .empty-state .big { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+    /* ── error banner ── */
+    .error-banner {
+      background: rgba(224,85,85,0.1);
+      border: 1px solid rgba(224,85,85,0.3);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      color: #e05555;
+      font-size: 0.8rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+    /* ── animations ── */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* stagger cards */
+    .repo-card:nth-child(1)  { animation-delay: 0.05s; }
+    .repo-card:nth-child(2)  { animation-delay: 0.10s; }
+    .repo-card:nth-child(3)  { animation-delay: 0.15s; }
+    .repo-card:nth-child(4)  { animation-delay: 0.20s; }
+    .repo-card:nth-child(5)  { animation-delay: 0.25s; }
+    .repo-card:nth-child(6)  { animation-delay: 0.30s; }
+    .repo-card:nth-child(7)  { animation-delay: 0.35s; }
+    .repo-card:nth-child(8)  { animation-delay: 0.40s; }
+    .repo-card:nth-child(9)  { animation-delay: 0.45s; }
+    .repo-card:nth-child(10) { animation-delay: 0.50s; }
+
+    @media (max-width: 600px) {
+      .login-card { padding: 2rem 1.5rem; }
+      .navbar { padding: 1rem 1.2rem; }
+      .main { padding: 1.5rem 1rem; }
+      .repo-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<div id="login-screen">
+  <div class="login-glow"></div>
+  <div class="login-card">
+    <div class="octocat-wrap">
+      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+          0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+          -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+          .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+          -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+          .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+          .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+          0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+    </div>
+    <h1>GitHub Connector</h1>
+    <p>Connect your GitHub account to view and explore all your repositories in one place.</p>
+    <a href="/login" class="btn-login">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      Continue with GitHub
+    </a>
+    <p class="login-note">Only read access is requested. We never store your token.</p>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD SCREEN ══════════════ -->
+<div id="dashboard-screen">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub Connector
+    </div>
+    <div style="display:flex;align-items:center;gap:0.8rem;">
+      <div class="user-pill">
+        <img id="user-avatar" class="user-avatar" src="" alt="avatar"/>
+        <span id="user-name" class="user-name"></span>
+      </div>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="page-header">
+      <h2>Your Repositories</h2>
+      <p id="last-updated" class="muted"></p>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-chip">Total &nbsp;<strong id="stat-total">—</strong></div>
+      <div class="stat-chip">Public &nbsp;<strong id="stat-public">—</strong></div>
+      <div class="stat-chip">Private &nbsp;<strong id="stat-private">—</strong></div>
+      <div class="stat-chip">⭐ Stars &nbsp;<strong id="stat-stars">—</strong></div>
+    </div>
+
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Search repositories..." oninput="filterRepos()" />
+    </div>
+
+    <div id="error-banner" class="error-banner"></div>
+
+    <div id="repo-container">
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <span>Fetching repositories...</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Language colour map ──
+  const LANG_COLORS = {
+    Python: '#3572A5', JavaScript: '#f1e05a', TypeScript: '#2b7489',
+    Java: '#b07219', 'C++': '#f34b7d', C: '#555555', Go: '#00ADD8',
+    Rust: '#dea584', Ruby: '#701516', PHP: '#4F5D95', Swift: '#ffac45',
+    Kotlin: '#F18E33', HTML: '#e34c26', CSS: '#563d7c', Shell: '#89e051',
+    Dart: '#00B4AB', Vue: '#41b883', default: '#7c6dfa',
+  };
+
+  let allRepos = [];
+  let accessToken = null;
+
+  // ── On page load ──
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+
+    if (urlToken) {
+      // Token came via URL from callback redirect
+      accessToken = urlToken;
+      sessionStorage.setItem('gh_token', urlToken);
+      // Clean URL so token doesn't stay visible
+      window.history.replaceState({}, '', '/');
+      showDashboard();
+    } else {
+      const saved = sessionStorage.getItem('gh_token');
+      if (saved) {
+        accessToken = saved;
+        showDashboard();
+      }
+      // else: stay on login screen
+    }
+  });
+
+  function showDashboard() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard-screen').style.display = 'block';
+    loadUserAndRepos();
+  }
+
+  async function loadUserAndRepos() {
+    try {
+      // Fetch repos
+      const res = await fetch('/repos', {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+
+      if (res.status === 401) { logout(); return; }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(data.error || 'Failed to fetch repositories.');
+        return;
+      }
+
+      allRepos = data.repositories || [];
+      renderStats();
+      renderRepos(allRepos);
+
+      // Fetch GitHub user info for avatar
+      const userRes = await fetch('https://api.github.com/user', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/vnd.github+json'
+        }
+      });
+      if (userRes.ok) {
+        const user = await userRes.json();
+        document.getElementById('user-avatar').src = user.avatar_url;
+        document.getElementById('user-name').textContent = user.login;
+        document.getElementById('last-updated').textContent =
+          `Showing repos for @${user.login} · fetched just now`;
+      }
+
+    } catch (err) {
+      showError('Network error. Is the Django server running?');
+    }
+  }
+
+  function renderStats() {
+    const total   = allRepos.length;
+    const pub     = allRepos.filter(r => !r.private).length;
+    const priv    = allRepos.filter(r => r.private).length;
+    const stars   = allRepos.reduce((s, r) => s + (r.stargazers_count || 0), 0);
+    document.getElementById('stat-total').textContent   = total;
+    document.getElementById('stat-public').textContent  = pub;
+    document.getElementById('stat-private').textContent = priv;
+    document.getElementById('stat-stars').textContent   = stars;
+  }
+
+  function renderRepos(repos) {
+    const container = document.getElementById('repo-container');
+
+    if (repos.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="big">📭</div>
+          No repositories found.
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `<div class="repo-grid">${repos.map(repoCard).join('')}</div>`;
+  }
+
+  function repoCard(repo) {
+    const desc    = repo.description || '<span style="color:var(--muted);font-style:italic">No description</span>';
+    const lang    = repo.language || '';
+    const color   = LANG_COLORS[lang] || LANG_COLORS.default;
+    const updated = timeAgo(repo.updated_at);
+
+    return `
+      <a class="repo-card" href="${repo.html_url}" target="_blank" rel="noopener">
+        <div class="repo-card-top">
+          <span class="repo-name">📁 ${repo.name}</span>
+          ${repo.private ? '<span class="repo-private-badge">Private</span>' : ''}
+        </div>
+        <div class="repo-desc">${desc}</div>
+        <div class="repo-footer">
+          ${lang ? `<span class="repo-meta"><span class="lang-dot" style="background:${color}"></span>${lang}</span>` : ''}
+          <span class="repo-meta">⭐ ${repo.stargazers_count}</span>
+          <span class="repo-meta">🍴 ${repo.forks_count}</span>
+          <span class="repo-meta" style="margin-left:auto">🕒 ${updated}</span>
+        </div>
+      </a>`;
+  }
+
+  function filterRepos() {
+    const q = document.getElementById('search-input').value.toLowerCase();
+    const filtered = allRepos.filter(r =>
+      r.name.toLowerCase().includes(q) ||
+      (r.description || '').toLowerCase().includes(q) ||
+      (r.language || '').toLowerCase().includes(q)
+    );
+    renderRepos(filtered);
+  }
+
+  function timeAgo(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)   return 'just now';
+    if (m < 60)  return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24)  return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    if (d < 30)  return `${d}d ago`;
+    return new Date(iso).toLocaleDateString();
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-banner');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+    document.getElementById('repo-container').innerHTML = '';
+  }
+
+  function logout() {
+    sessionStorage.removeItem('gh_token');
+    window.location.href = '/';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>GitHub Connector</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header svg { color: #e6edf3; }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e6edf3;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #8b949e;
+        }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #30363d;
+        }
+        .username { color: #e6edf3; font-weight: 500; }
+
+        /* ── Main ── */
+        .main {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+
+        /* ── Stats Bar ── */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px 24px;
+            flex: 1;
+            min-width: 140px;
+            text-align: center;
+        }
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #58a6ff;
+        }
+        .stat-card .label {
+            font-size: 12px;
+            color: #8b949e;
+            margin-top: 4px;
+        }
+
+        /* ── Search ── */
+        .search-bar {
+            margin-bottom: 20px;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 10px 16px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #e6edf3;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-bar input:focus { border-color: #58a6ff; }
+        .search-bar input::placeholder { color: #484f58; }
+
+        /* ── Repo List ── */
+        .repo-list { display: flex; flex-direction: column; gap: 12px; }
+
+        .repo-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 20px 24px;
+            transition: border-color 0.2s, transform 0.1s;
+            cursor: pointer;
+        }
+        .repo-card:hover {
+            border-color: #58a6ff;
+            transform: translateY(-1px);
+        }
+
+        .repo-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .repo-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #58a6ff;
+            text-decoration: none;
+        }
+        .repo-name:hover { text-decoration: underline; }
+
+        .repo-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            white-space: nowrap;
+        }
+        .repo-badge.private { border-color: #f0883e44; color: #f0883e; }
+
+        .repo-desc {
+            font-size: 13px;
+            color: #8b949e;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .repo-meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #8b949e;
+        }
+        .lang-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* ── Loading / Error / Login ── */
+        .center-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            gap: 20px;
+            text-align: center;
+        }
+        .center-box svg { color: #8b949e; }
+        .center-box h2 { font-size: 20px; color: #e6edf3; }
+        .center-box p { font-size: 14px; color: #8b949e; max-width: 360px; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            background: #238636;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #2ea043; }
+        .btn-logout {
+            background: transparent;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 6px 14px;
+            font-size: 13px;
+        }
+        .btn-logout:hover { border-color: #f85149; color: #f85149; background: transparent; }
+
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid #30363d;
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty { text-align: center; padding: 60px 0; color: #8b949e; font-size: 14px; }
+
+        /* Language colors */
+        .lang-Python     { background: #3572A5; }
+        .lang-JavaScript { background: #f1e05a; }
+        .lang-TypeScript { background: #2b7489; }
+        .lang-Java       { background: #b07219; }
+        .lang-Go         { background: #00ADD8; }
+        .lang-Rust       { background: #dea584; }
+        .lang-C          { background: #555555; }
+        .lang-HTML       { background: #e34c26; }
+        .lang-CSS        { background: #563d7c; }
+        .lang-default    { background: #8b949e; }
+    </style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="loginScreen" class="center-box" style="display:none;">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+    </svg>
+    <h2>GitHub Connector</h2>
+    <p>Sign in with your GitHub account to view your repositories.</p>
+    <a href="/login" class="btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        Login with GitHub
+    </a>
+</div>
+
+<!-- ── LOADING SCREEN ── -->
+<div id="loadingScreen" class="center-box" style="display:none;">
+    <div class="spinner"></div>
+    <p>Fetching your repositories...</p>
+</div>
+
+<!-- ── ERROR SCREEN ── -->
+<div id="errorScreen" class="center-box" style="display:none;">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <h2>Something went wrong</h2>
+    <p id="errorMsg">Could not fetch repositories.</p>
+    <a href="/login" class="btn">Try Again</a>
+</div>
+
+<!-- ── REPOS SCREEN ── -->
+<div id="reposScreen" style="display:none;">
+    <div class="header">
+        <div class="header-left">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            <h1>GitHub Connector</h1>
+        </div>
+        <div class="user-info">
+            <img id="userAvatar" class="avatar" src="" alt="avatar" style="display:none"/>
+            <span class="username" id="userName"></span>
+            <button class="btn btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="number" id="totalRepos">0</div>
+                <div class="label">Total Repos</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="totalStars">0</div>
+                <div class="label">Total Stars</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="totalForks">0</div>
+                <div class="label">Total Forks</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="totalPrivate">0</div>
+                <div class="label">Private Repos</div>
+            </div>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search repositories..." oninput="filterRepos()" />
+        </div>
+
+        <div class="repo-list" id="repoList"></div>
+    </div>
+</div>
+
+<script>
+    // ── Language color helper ──────────────────────────────────────────
+    function getLangClass(lang) {
+        if (!lang) return "lang-default";
+        const safe = lang.replace(/[^a-zA-Z]/g, "");
+        return `lang-${safe}`;
+    }
+
+    // ── Time ago helper ────────────────────────────────────────────────
+    function timeAgo(dateStr) {
+        const diff = (Date.now() - new Date(dateStr)) / 1000;
+        if (diff < 60)       return "just now";
+        if (diff < 3600)     return `${Math.floor(diff/60)}m ago`;
+        if (diff < 86400)    return `${Math.floor(diff/3600)}h ago`;
+        if (diff < 2592000)  return `${Math.floor(diff/86400)}d ago`;
+        if (diff < 31536000) return `${Math.floor(diff/2592000)}mo ago`;
+        return `${Math.floor(diff/31536000)}y ago`;
+    }
+
+    // ── Render a single repo card ──────────────────────────────────────
+    function repoCard(repo) {
+        return `
+        <div class="repo-card" onclick="window.open('${repo.html_url}','_blank')">
+            <div class="repo-top">
+                <a class="repo-name" href="${repo.html_url}" target="_blank" onclick="event.stopPropagation()">
+                    ${repo.full_name}
+                </a>
+                <span class="repo-badge ${repo.private ? 'private' : ''}">
+                    ${repo.private ? '🔒 Private' : '🌐 Public'}
+                </span>
+            </div>
+            <div class="repo-desc">${repo.description || '<em style="color:#484f58">No description provided</em>'}</div>
+            <div class="repo-meta">
+                ${repo.language ? `
+                <span class="meta-item">
+                    <span class="lang-dot ${getLangClass(repo.language)}"></span>
+                    ${repo.language}
+                </span>` : ''}
+                <span class="meta-item">⭐ ${repo.stargazers_count}</span>
+                <span class="meta-item">🍴 ${repo.forks_count}</span>
+                <span class="meta-item">🕒 Updated ${timeAgo(repo.updated_at)}</span>
+            </div>
+        </div>`;
+    }
+
+    // ── Filter repos by search input ───────────────────────────────────
+    let allRepos = [];
+    function filterRepos() {
+        const query = document.getElementById("searchInput").value.toLowerCase();
+        const filtered = allRepos.filter(r =>
+            r.name.toLowerCase().includes(query) ||
+            (r.description || "").toLowerCase().includes(query) ||
+            (r.language || "").toLowerCase().includes(query)
+        );
+        const list = document.getElementById("repoList");
+        list.innerHTML = filtered.length
+            ? filtered.map(repoCard).join("")
+            : `<div class="empty">No repositories match "<strong>${query}</strong>"</div>`;
+    }
+
+    // ── Show/hide screens ──────────────────────────────────────────────
+    function show(id) {
+        ["loginScreen","loadingScreen","errorScreen","reposScreen"]
+            .forEach(s => document.getElementById(s).style.display = "none");
+        document.getElementById(id).style.display =
+            id === "reposScreen" ? "block" : "flex";
+    }
+
+    // ── Logout ─────────────────────────────────────────────────────────
+    function logout() {
+        localStorage.removeItem("github_access_token");
+        show("loginScreen");
+    }
+
+    // ── Fetch and render repos ─────────────────────────────────────────
+    async function loadRepos(token) {
+        show("loadingScreen");
+        try {
+            const res = await fetch("/repos", {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                document.getElementById("errorMsg").textContent =
+                    data.error || "Failed to fetch repositories.";
+                show("errorScreen");
+                return;
+            }
+
+            allRepos = data.repositories;
+
+            // Stats
+            document.getElementById("totalRepos").textContent  = data.count;
+            document.getElementById("totalStars").textContent  = allRepos.reduce((s,r) => s + r.stargazers_count, 0);
+            document.getElementById("totalForks").textContent  = allRepos.reduce((s,r) => s + r.forks_count, 0);
+            document.getElementById("totalPrivate").textContent = allRepos.filter(r => r.private).length;
+
+            // Render all cards
+            document.getElementById("repoList").innerHTML = allRepos.map(repoCard).join("");
+
+            // Try to get GitHub username from the full_name of first repo
+            if (allRepos.length > 0) {
+                const uname = allRepos[0].full_name.split("/")[0];
+                document.getElementById("userName").textContent = uname;
+                document.getElementById("userAvatar").src = `https://github.com/${uname}.png?size=64`;
+                document.getElementById("userAvatar").style.display = "block";
+            }
+
+            show("reposScreen");
+
+        } catch (err) {
+            document.getElementById("errorMsg").textContent = "Network error. Is the server running?";
+            show("errorScreen");
+        }
+    }
+
+    // ── On page load: check for token ─────────────────────────────────
+    window.addEventListener("DOMContentLoaded", () => {
+        // Check if GitHub just redirected back with a token in the URL hash
+        // (We store it after callback and redirect here)
+        const params = new URLSearchParams(window.location.search);
+        const tokenFromUrl = params.get("token");
+
+        if (tokenFromUrl) {
+            localStorage.setItem("github_access_token", tokenFromUrl);
+            // Clean the URL
+            window.history.replaceState({}, "", "/repos-page");
+        }
+
+        const token = localStorage.getItem("github_access_token");
+        if (token) {
+            loadRepos(token);
+        } else {
+            show("loginScreen");
+        }
+    });
+</script>
+</body>
+</html>
