@@ -85,8 +85,3 @@ GITHUB_OAUTH_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
 GITHUB_OAUTH_TOKEN_URL = "https://github.com/login/oauth/access_token"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-load_dotenv()
-
-# Temporary debug — remove after confirming values load correctly
-print("CLIENT ID:", os.getenv("GITHUB_CLIENT_ID"))
-print("SECRET:", os.getenv("GITHUB_CLIENT_SECRET"))
